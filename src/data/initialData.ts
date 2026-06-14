@@ -29,48 +29,43 @@ export const DAY_BLOCKS: DayBlock[] = [
   { start: "22:00", end: "23:30", label: "Vicente e Desacelerar", hint: "Presença real com Vicente. Guarde o celular e esteja disponível de verdade antes de dormir.", icon: "favorite" },
 ];
 
-export function getActiveBlock(currentTimeStr: string): DayBlock | null {
-  // Parse currentTimeStr "HH:MM"
+export const WEEKEND_BLOCKS: DayBlock[] = [
+  { start: "07:00", end: "09:00", label: "Manhã Tranquila", hint: "Acorde sem alarme, café com calma. Sem tela por pelo menos 30 minutos.", icon: "sunrise" },
+  { start: "09:00", end: "11:30", label: "Estudos / MEI", hint: "Aproveite a energia da manhã para avançar no que ficou pendente durante a semana.", icon: "laptop_chromebook" },
+  { start: "11:30", end: "13:00", label: "Casa e Organização", hint: "Um bloco só para manter o espaço em ordem. Ambiente arrumado = mente mais leve.", icon: "home" },
+  { start: "13:00", end: "15:00", label: "Almoço e Descanso", hint: "Coma bem, descanse de verdade. Não é fraqueza — é estratégia.", icon: "restaurant" },
+  { start: "15:00", end: "19:00", label: "Tempo Livre / Saídas", hint: "Saia, explore, encontre pessoas. Esse bloco recarrega o que a semana drena.", icon: "explore" },
+  { start: "19:00", end: "22:00", label: "Vicente e Família", hint: "Presença real. Guarde o celular e esteja disponível de verdade.", icon: "favorite" },
+  { start: "22:00", end: "23:30", label: "Desacelerar", hint: "Leitura leve, sem telas. Prepare o corpo para uma semana nova.", icon: "bedtime" },
+];
+
+export function getActiveBlock(currentTimeStr: string, blocks: DayBlock[] = DAY_BLOCKS): DayBlock | null {
   const [nowH, nowM] = currentTimeStr.split(':').map(Number);
   const nowInMinutes = nowH * 60 + nowM;
-
-  for (const block of DAY_BLOCKS) {
+  for (const block of blocks) {
     const [startH, startM] = block.start.split(':').map(Number);
     const [endH, endM] = block.end.split(':').map(Number);
-    const startInMinutes = startH * 60 + startM;
-    const endInMinutes = endH * 60 + endM;
-
-    // Check if within bounds
-    if (nowInMinutes >= startInMinutes && nowInMinutes <= endInMinutes) {
+    if (nowInMinutes >= startH * 60 + startM && nowInMinutes <= endH * 60 + endM) {
       return block;
     }
   }
-
   return null;
 }
 
-export function getNextBlock(currentTimeStr: string): DayBlock | null {
+export function getNextBlock(currentTimeStr: string, blocks: DayBlock[] = DAY_BLOCKS): DayBlock | null {
   const [nowH, nowM] = currentTimeStr.split(':').map(Number);
   const nowInMinutes = nowH * 60 + nowM;
-
   let soonestNext: DayBlock | null = null;
   let soonestDiff = Infinity;
-
-  for (const block of DAY_BLOCKS) {
+  for (const block of blocks) {
     const [startH, startM] = block.start.split(':').map(Number);
     const startInMinutes = startH * 60 + startM;
-
     if (startInMinutes > nowInMinutes) {
       const diff = startInMinutes - nowInMinutes;
-      if (diff < soonestDiff) {
-        soonestDiff = diff;
-        soonestNext = block;
-      }
+      if (diff < soonestDiff) { soonestDiff = diff; soonestNext = block; }
     }
   }
-
-  // Fallback to first block of tomorrow if we are past all blocks
-  return soonestNext || DAY_BLOCKS[0];
+  return soonestNext || (blocks[0] ?? null);
 }
 
 export function getCorpoRecommendation(dayOfWeek: number): { title: string; subtitle: string; minOption: string } {

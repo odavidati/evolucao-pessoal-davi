@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft, Calendar, Loader2, WifiOff, MapPin } from 'lucide-react';
+import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft, Calendar, Loader2, MapPin, Pencil, X } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { FilaTask, EstacionamentoItem } from '../types';
-import { GCalEvent, getEventTimes, isEventNow } from '../services/googleCalendar';
-import { getActiveBlock, getNextBlock } from '../data/initialData';
+import { GCalEvent, GCalEventInput, getEventTimes, isEventNow, buildLocalISO } from '../services/googleCalendar';
+import { DayBlock, getActiveBlock, getNextBlock } from '../data/initialData';
 
 interface RotinaViewProps {
   filaUnica: FilaTask[];
@@ -23,11 +23,20 @@ interface RotinaViewProps {
   
   onOpenModoAtraso: () => void;
   onOpenEstouPerdido: () => void;
+  isWeekend: boolean;
+  weekdayBlocks: DayBlock[];
+  weekendBlocks: DayBlock[];
+  currentBlocks: DayBlock[];
+  onSaveWeekdayBlocks: (blocks: DayBlock[]) => void;
+  onSaveWeekendBlocks: (blocks: DayBlock[]) => void;
   gCalToken: string | null;
   calendarEvents: GCalEvent[];
   calendarLoading: boolean;
   onGCalConnect: (token: string) => void;
   onGCalDisconnect: () => void;
+  onGCalCreateEvent: (input: GCalEventInput) => Promise<void>;
+  onGCalUpdateEvent: (eventId: string, input: GCalEventInput) => Promise<void>;
+  onGCalDeleteEvent: (eventId: string) => Promise<void>;
 }
 
 export default function RotinaView({
@@ -44,11 +53,20 @@ export default function RotinaView({
   onRotateDomestica,
   onOpenModoAtraso,
   onOpenEstouPerdido,
+  isWeekend,
+  weekdayBlocks,
+  weekendBlocks,
+  currentBlocks,
+  onSaveWeekdayBlocks,
+  onSaveWeekendBlocks,
   gCalToken,
   calendarEvents,
   calendarLoading,
   onGCalConnect,
   onGCalDisconnect,
+  onGCalCreateEvent,
+  onGCalUpdateEvent,
+  onGCalDeleteEvent,
 }: RotinaViewProps) {
   const [currentTime, setCurrentTime] = useState('08:00');
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -59,8 +77,129 @@ export default function RotinaView({
   const googleLogin = useGoogleLogin({
     onSuccess: (res) => onGCalConnect(res.access_token),
     onError: () => {},
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar.events',
   });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nowHHMM = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  type EventForm = { title: string; date: string; startTime: string; endTime: string; description: string; location: string };
+  const emptyForm = (): EventForm => ({
+    title: '', date: todayStr, startTime: nowHHMM(), endTime: '', description: '', location: ''
+  });
+
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<GCalEvent | null>(null);
+  const [eventForm, setEventForm] = useState<EventForm>(emptyForm());
+  const [formSaving, setFormSaving] = useState(false);
+
+  const openCreate = () => {
+    setEditingEvent(null);
+    setEventForm(emptyForm());
+    setShowEventForm(true);
+  };
+
+  const openEdit = (event: GCalEvent) => {
+    const { start, end } = getEventTimes(event);
+    const dateStr = event.start.dateTime
+      ? new Date(event.start.dateTime).toISOString().slice(0, 10)
+      : todayStr;
+    setEditingEvent(event);
+    setEventForm({
+      title: event.summary || '',
+      date: dateStr,
+      startTime: start,
+      endTime: end,
+      description: event.description || '',
+      location: event.location || '',
+    });
+    setShowEventForm(true);
+  };
+
+  const closeForm = () => {
+    setShowEventForm(false);
+    setEditingEvent(null);
+  };
+
+  const handleSaveEvent = async () => {
+    if (!eventForm.title.trim() || !eventForm.startTime || !eventForm.endTime) return;
+    setFormSaving(true);
+    const input: GCalEventInput = {
+      summary: eventForm.title.trim(),
+      startDateTime: buildLocalISO(eventForm.date, eventForm.startTime),
+      endDateTime: buildLocalISO(eventForm.date, eventForm.endTime),
+      description: eventForm.description || undefined,
+      location: eventForm.location || undefined,
+    };
+    try {
+      if (editingEvent) {
+        await onGCalUpdateEvent(editingEvent.id, input);
+      } else {
+        await onGCalCreateEvent(input);
+      }
+      closeForm();
+    } finally {
+      setFormSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    setFormSaving(true);
+    try {
+      await onGCalDeleteEvent(eventId);
+      closeForm();
+    } finally {
+      setFormSaving(false);
+    }
+  };
+
+  // Block management
+  type BlockFormType = { label: string; start: string; end: string; hint: string };
+  const emptyBlock = (): BlockFormType => ({ label: '', start: '', end: '', hint: '' });
+
+  const [showBlockManager, setShowBlockManager] = useState(false);
+  const [editingBlockType, setEditingBlockType] = useState<'weekday' | 'weekend'>('weekday');
+  const [showBlockForm, setShowBlockForm] = useState(false);
+  const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
+  const [blockForm, setBlockForm] = useState<BlockFormType>(emptyBlock());
+
+  const blocksBeingEdited = editingBlockType === 'weekday' ? weekdayBlocks : weekendBlocks;
+  const saveFn = editingBlockType === 'weekday' ? onSaveWeekdayBlocks : onSaveWeekendBlocks;
+
+  const openBlockCreate = () => {
+    setEditingBlockIdx(null);
+    setBlockForm(emptyBlock());
+    setShowBlockForm(true);
+  };
+
+  const openBlockEdit = (idx: number) => {
+    const b = blocksBeingEdited[idx];
+    setEditingBlockIdx(idx);
+    setBlockForm({ label: b.label, start: b.start, end: b.end, hint: b.hint });
+    setShowBlockForm(true);
+  };
+
+  const handleSaveBlock = () => {
+    if (!blockForm.label.trim() || !blockForm.start || !blockForm.end) return;
+    const newBlock: DayBlock = { label: blockForm.label.trim(), start: blockForm.start, end: blockForm.end, hint: blockForm.hint.trim(), icon: 'schedule' };
+    let updated: DayBlock[];
+    if (editingBlockIdx !== null) {
+      updated = blocksBeingEdited.map((b, i) => i === editingBlockIdx ? newBlock : b);
+    } else {
+      updated = [...blocksBeingEdited, newBlock].sort((a, b) => a.start.localeCompare(b.start));
+    }
+    saveFn(updated);
+    setShowBlockForm(false);
+  };
+
+  const handleDeleteBlock = (idx: number) => {
+    const updated = blocksBeingEdited.filter((_, i) => i !== idx);
+    saveFn(updated);
+    setShowBlockForm(false);
+  };
 
   // Sync clock
   useEffect(() => {
@@ -78,8 +217,8 @@ export default function RotinaView({
     return () => clearInterval(interval);
   }, []);
 
-  const activeBlock = getActiveBlock(currentTime);
-  const nextBlock = getNextBlock(currentTime);
+  const activeBlock = getActiveBlock(currentTime, currentBlocks);
+  const nextBlock = getNextBlock(currentTime, currentBlocks);
 
   const blockProgress = useMemo(() => {
     if (!activeBlock) return 0;
@@ -160,6 +299,212 @@ export default function RotinaView({
         </section>
       )}
 
+      {/* Routine overview + manage button */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <div>
+            <p className="text-xs font-bold text-text-sec uppercase tracking-widest">
+              {isWeekend ? 'Fim de semana' : 'Semana'} · {currentBlocks.length} blocos
+            </p>
+          </div>
+          <button
+            onClick={() => { setEditingBlockType(isWeekend ? 'weekend' : 'weekday'); setShowBlockManager(true); }}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/40 border border-white/50 text-xs font-bold text-text-main active:scale-95 transition-transform shadow-sm"
+          >
+            <Pencil className="w-3 h-3" />
+            Editar rotina
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          {currentBlocks.map((block, i) => {
+            const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+            const nowMin = toMin(currentTime);
+            const isActive = nowMin >= toMin(block.start) && nowMin <= toMin(block.end);
+            const isPast = nowMin > toMin(block.end);
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all ${
+                  isActive
+                    ? 'bg-brand-blue/10 border-brand-blue/30 shadow-sm'
+                    : isPast
+                    ? 'bg-white/10 border-white/15 opacity-50'
+                    : 'bg-white/25 border-white/35'
+                }`}
+              >
+                <div className="w-14 shrink-0 text-right">
+                  <span className={`text-xs font-extrabold ${isActive ? 'text-brand-blue' : 'text-text-sec'}`}>{block.start}</span>
+                  <span className="text-[10px] text-text-sec block">{block.end}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold truncate ${isActive ? 'text-text-main' : 'text-text-sec'}`}>{block.label}</p>
+                </div>
+                {isActive && (
+                  <span className="text-[9px] bg-brand-blue text-white font-extrabold px-1.5 py-0.5 rounded uppercase shrink-0">Agora</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Block Manager Modal */}
+      <AnimatePresence>
+        {showBlockManager && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowBlockManager(false); }}
+          >
+            <motion.div
+              className="w-full max-w-lg bg-white rounded-t-[32px] pb-6 shadow-2xl flex flex-col max-h-[90dvh]"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            >
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+                <h3 className="text-lg font-display font-black text-gray-900">Gerenciar Rotina</h3>
+                <button onClick={() => setShowBlockManager(false)} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Weekday / Weekend tabs */}
+              <div className="flex gap-2 px-6 pb-4 shrink-0">
+                {(['weekday', 'weekend'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setEditingBlockType(t)}
+                    className={`flex-1 h-9 rounded-2xl text-xs font-bold transition-all ${
+                      editingBlockType === t
+                        ? 'bg-brand-blue text-white shadow-md'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {t === 'weekday' ? 'Seg – Sex' : 'Sáb – Dom'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-6 space-y-2">
+                {blocksBeingEdited.map((block, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="w-12 shrink-0 text-right">
+                      <span className="text-xs font-extrabold text-brand-blue block">{block.start}</span>
+                      <span className="text-[10px] text-gray-400">{block.end}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">{block.label}</p>
+                      {block.hint && <p className="text-[10px] text-gray-400 truncate mt-0.5">{block.hint}</p>}
+                    </div>
+                    <button
+                      onClick={() => openBlockEdit(idx)}
+                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-6 pt-4 shrink-0">
+                <button
+                  onClick={openBlockCreate}
+                  className="w-full h-12 rounded-2xl bg-brand-blue text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar bloco
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Block Form Modal */}
+      <AnimatePresence>
+        {showBlockForm && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowBlockForm(false); }}
+          >
+            <motion.div
+              className="w-full max-w-lg bg-white rounded-t-[32px] p-6 space-y-4 shadow-2xl"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-display font-black text-gray-900">
+                  {editingBlockIdx !== null ? 'Editar Bloco' : 'Novo Bloco'}
+                </h3>
+                <button onClick={() => setShowBlockForm(false)} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Nome do bloco *"
+                  value={blockForm.label}
+                  onChange={e => setBlockForm(f => ({ ...f, label: e.target.value }))}
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1 pl-1">Início *</label>
+                    <input
+                      type="time"
+                      value={blockForm.start}
+                      onChange={e => setBlockForm(f => ({ ...f, start: e.target.value }))}
+                      className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1 pl-1">Fim *</label>
+                    <input
+                      type="time"
+                      value={blockForm.end}
+                      onChange={e => setBlockForm(f => ({ ...f, end: e.target.value }))}
+                      className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                  </div>
+                </div>
+                <textarea
+                  placeholder="Dica para esse bloco (opcional)"
+                  value={blockForm.hint}
+                  onChange={e => setBlockForm(f => ({ ...f, hint: e.target.value }))}
+                  rows={2}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                {editingBlockIdx !== null && (
+                  <button
+                    onClick={() => handleDeleteBlock(editingBlockIdx)}
+                    className="h-12 px-5 rounded-2xl bg-red-50 text-red-600 font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveBlock}
+                  disabled={!blockForm.label.trim() || !blockForm.start || !blockForm.end}
+                  className="flex-1 h-12 rounded-2xl bg-brand-blue text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50 shadow-md"
+                >
+                  <Check className="w-4 h-4" strokeWidth={3} />
+                  {editingBlockIdx !== null ? 'Salvar' : 'Criar Bloco'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Google Calendar Integration */}
       <section className="space-y-3">
         {!gCalToken ? (
@@ -189,12 +534,21 @@ export default function RotinaView({
                 <h3 className="text-sm font-bold text-text-main">Hoje no Google</h3>
                 {calendarLoading && <Loader2 className="w-3.5 h-3.5 text-brand-blue animate-spin" />}
               </div>
-              <button
-                onClick={onGCalDisconnect}
-                className="text-[10px] text-text-sec hover:text-text-main font-bold uppercase tracking-wider"
-              >
-                Desconectar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={openCreate}
+                  className="w-7 h-7 rounded-full bg-brand-blue text-white flex items-center justify-center active:scale-95 transition-transform shadow-sm"
+                  title="Novo evento"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onGCalDisconnect}
+                  className="text-[10px] text-text-sec hover:text-text-main font-bold uppercase tracking-wider"
+                >
+                  Desconectar
+                </button>
+              </div>
             </div>
 
             {calendarEvents.length === 0 && !calendarLoading ? (
@@ -232,11 +586,20 @@ export default function RotinaView({
                             </p>
                           )}
                         </div>
-                        {now && (
-                          <span className="text-[9px] bg-brand-blue text-white font-extrabold px-1.5 py-0.5 rounded shrink-0 uppercase">
-                            Agora
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {now && (
+                            <span className="text-[9px] bg-brand-blue text-white font-extrabold px-1.5 py-0.5 rounded uppercase">
+                              Agora
+                            </span>
+                          )}
+                          <button
+                            onClick={() => openEdit(event)}
+                            className="w-7 h-7 rounded-full hover:bg-white/40 flex items-center justify-center text-text-sec active:scale-90 transition-transform"
+                            title="Editar evento"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })
@@ -419,6 +782,114 @@ export default function RotinaView({
           </button>
         </div>
       </section>
+
+      {/* Event Form Modal */}
+      <AnimatePresence>
+        {showEventForm && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeForm(); }}
+          >
+            <motion.div
+              className="w-full max-w-lg bg-white rounded-t-[32px] p-6 space-y-4 shadow-2xl"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-display font-black text-gray-900">
+                  {editingEvent ? 'Editar Evento' : 'Novo Evento'}
+                </h3>
+                <button onClick={closeForm} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Título do evento *"
+                  value={eventForm.title}
+                  onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                  autoFocus
+                />
+
+                <input
+                  type="date"
+                  value={eventForm.date}
+                  onChange={e => setEventForm(f => ({ ...f, date: e.target.value }))}
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                />
+
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1 pl-1">Início *</label>
+                    <input
+                      type="time"
+                      value={eventForm.startTime}
+                      onChange={e => setEventForm(f => ({ ...f, startTime: e.target.value }))}
+                      className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1 pl-1">Fim *</label>
+                    <input
+                      type="time"
+                      value={eventForm.endTime}
+                      onChange={e => setEventForm(f => ({ ...f, endTime: e.target.value }))}
+                      className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    />
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Local (opcional)"
+                  value={eventForm.location}
+                  onChange={e => setEventForm(f => ({ ...f, location: e.target.value }))}
+                  className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm font-bold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                />
+
+                <textarea
+                  placeholder="Descrição (opcional)"
+                  value={eventForm.description}
+                  onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                {editingEvent && (
+                  <button
+                    onClick={() => handleDeleteEvent(editingEvent.id)}
+                    disabled={formSaving}
+                    className="h-12 px-5 rounded-2xl bg-red-50 text-red-600 font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveEvent}
+                  disabled={formSaving || !eventForm.title.trim() || !eventForm.startTime || !eventForm.endTime}
+                  className="flex-1 h-12 rounded-2xl bg-brand-blue text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50 shadow-md"
+                >
+                  {formSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" strokeWidth={3} />}
+                  {editingEvent ? 'Salvar' : 'Criar Evento'}
+                </button>
+              </div>
+
+              <div className="h-safe-area-bottom" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Custom Bottom Actions */}
       <section className="flex flex-col gap-3 pt-2">

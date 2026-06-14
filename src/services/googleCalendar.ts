@@ -8,6 +8,14 @@ export interface GCalEvent {
   location?: string;
 }
 
+export interface GCalEventInput {
+  summary: string;
+  startDateTime: string; // ISO string
+  endDateTime: string;   // ISO string
+  description?: string;
+  location?: string;
+}
+
 export function getEventTimes(event: GCalEvent): { start: string; end: string; isAllDay: boolean; startMinutes: number } {
   if (!event.start.dateTime) {
     return { start: '', end: '', isAllDay: true, startMinutes: 0 };
@@ -47,6 +55,26 @@ export function setCachedEvents(events: GCalEvent[]): void {
   } catch {}
 }
 
+// Build local date ISO string without UTC shift (respects user timezone)
+export function buildLocalISO(dateStr: string, timeStr: string): string {
+  return `${dateStr}T${timeStr}:00`;
+}
+
+async function calendarRequest(method: string, path: string, token: string, body?: object): Promise<Response> {
+  const res = await fetch(`https://www.googleapis.com/calendar/v3${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) throw new Error('TOKEN_EXPIRED');
+  if (!res.ok) throw new Error(`GCAL_ERROR_${res.status}`);
+  return res;
+}
+
 export async function fetchTodayCalendarEvents(accessToken: string): Promise<GCalEvent[]> {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
@@ -60,14 +88,35 @@ export async function fetchTodayCalendarEvents(accessToken: string): Promise<GCa
     maxResults: '25',
   });
 
-  const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } }
-  );
-
-  if (res.status === 401) throw new Error('TOKEN_EXPIRED');
-  if (!res.ok) throw new Error(`GCAL_ERROR_${res.status}`);
-
+  const res = await calendarRequest('GET', `/calendars/primary/events?${params}`, accessToken);
   const data = await res.json();
   return (data.items || []) as GCalEvent[];
+}
+
+export async function createCalendarEvent(accessToken: string, input: GCalEventInput): Promise<GCalEvent> {
+  const body = {
+    summary: input.summary,
+    description: input.description,
+    location: input.location,
+    start: { dateTime: input.startDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    end: { dateTime: input.endDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+  };
+  const res = await calendarRequest('POST', '/calendars/primary/events', accessToken, body);
+  return res.json();
+}
+
+export async function updateCalendarEvent(accessToken: string, eventId: string, input: GCalEventInput): Promise<GCalEvent> {
+  const body = {
+    summary: input.summary,
+    description: input.description,
+    location: input.location,
+    start: { dateTime: input.startDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    end: { dateTime: input.endDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+  };
+  const res = await calendarRequest('PUT', `/calendars/primary/events/${eventId}`, accessToken, body);
+  return res.json();
+}
+
+export async function deleteCalendarEvent(accessToken: string, eventId: string): Promise<void> {
+  await calendarRequest('DELETE', `/calendars/primary/events/${eventId}`, accessToken);
 }

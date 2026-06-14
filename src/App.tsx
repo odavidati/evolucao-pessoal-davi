@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookOpen, AlertTriangle, Zap, Smartphone, X } from 'lucide-react';
 
 import { AppState, DailyCheckIn, EssentialItems, CustomChecklistItem, BodyMetrics, FechamentoDia, VidaHabitos } from './types';
-import { DOMESTIC_TASKS, INITIAL_CHECKLIST_ATRASO } from './data/initialData';
-import { GCalEvent, fetchTodayCalendarEvents, getCachedEvents, setCachedEvents } from './services/googleCalendar';
+import { DOMESTIC_TASKS, INITIAL_CHECKLIST_ATRASO, DAY_BLOCKS, WEEKEND_BLOCKS, DayBlock } from './data/initialData';
+import { GCalEvent, GCalEventInput, fetchTodayCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getCachedEvents, setCachedEvents } from './services/googleCalendar';
 
 // Subcomponents
 import SplashView from './components/SplashView';
@@ -99,6 +99,36 @@ export default function App() {
 
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }>>([]);
   const [pendingConfirmAction, setPendingConfirmAction] = useState<'reset' | 'clearWorkout' | null>(null);
+
+  const isWeekend = [0, 6].includes(new Date().getDay());
+
+  const [weekdayBlocks, setWeekdayBlocks] = useState<DayBlock[]>(() => {
+    try {
+      const raw = localStorage.getItem('weekday_blocks');
+      if (raw) return JSON.parse(raw) as DayBlock[];
+    } catch {}
+    return DAY_BLOCKS;
+  });
+
+  const [weekendBlocks, setWeekendBlocks] = useState<DayBlock[]>(() => {
+    try {
+      const raw = localStorage.getItem('weekend_blocks');
+      if (raw) return JSON.parse(raw) as DayBlock[];
+    } catch {}
+    return WEEKEND_BLOCKS;
+  });
+
+  const currentBlocks = isWeekend ? weekendBlocks : weekdayBlocks;
+
+  const handleSaveWeekdayBlocks = (blocks: DayBlock[]) => {
+    setWeekdayBlocks(blocks);
+    try { localStorage.setItem('weekday_blocks', JSON.stringify(blocks)); } catch {}
+  };
+
+  const handleSaveWeekendBlocks = (blocks: DayBlock[]) => {
+    setWeekendBlocks(blocks);
+    try { localStorage.setItem('weekend_blocks', JSON.stringify(blocks)); } catch {}
+  };
 
   const [gCalToken, setGCalToken] = useState<string | null>(() => {
     try { return localStorage.getItem('gcal_token'); } catch { return null; }
@@ -427,6 +457,57 @@ export default function App() {
     setGCalToken(null);
     setCalendarEvents([]);
     showToast('Google Calendar desconectado.', 'info');
+  };
+
+  const refreshCalendarEvents = async (token: string) => {
+    try {
+      const events = await fetchTodayCalendarEvents(token);
+      setCalendarEvents(events);
+      setCachedEvents(events);
+    } catch (e: any) {
+      if (e.message === 'TOKEN_EXPIRED') {
+        try { localStorage.removeItem('gcal_token'); } catch {}
+        setGCalToken(null);
+        showToast('Sessão expirada. Conecte novamente.', 'warning');
+      }
+    }
+  };
+
+  const handleGCalCreateEvent = async (input: GCalEventInput) => {
+    if (!gCalToken) return;
+    try {
+      await createCalendarEvent(gCalToken, input);
+      await refreshCalendarEvents(gCalToken);
+      showToast('Evento criado no Google Calendar!', 'success');
+    } catch (e: any) {
+      showToast('Erro ao criar evento.', 'error');
+    }
+  };
+
+  const handleGCalUpdateEvent = async (eventId: string, input: GCalEventInput) => {
+    if (!gCalToken) return;
+    try {
+      await updateCalendarEvent(gCalToken, eventId, input);
+      await refreshCalendarEvents(gCalToken);
+      showToast('Evento atualizado!', 'success');
+    } catch {
+      showToast('Erro ao atualizar evento.', 'error');
+    }
+  };
+
+  const handleGCalDeleteEvent = async (eventId: string) => {
+    if (!gCalToken) return;
+    try {
+      await deleteCalendarEvent(gCalToken, eventId);
+      setCalendarEvents(prev => {
+        const updated = prev.filter(e => e.id !== eventId);
+        setCachedEvents(updated);
+        return updated;
+      });
+      showToast('Evento removido.', 'info');
+    } catch {
+      showToast('Erro ao remover evento.', 'error');
+    }
   };
 
   const handleImportState = (newState: AppState) => {
@@ -852,11 +933,20 @@ export default function App() {
                   onRotateDomestica={handleRotateDomestica}
                   onOpenModoAtraso={() => setActiveOverlay('atraso')}
                   onOpenEstouPerdido={() => setActiveOverlay('lost')}
+                  isWeekend={isWeekend}
+                  weekdayBlocks={weekdayBlocks}
+                  weekendBlocks={weekendBlocks}
+                  currentBlocks={currentBlocks}
+                  onSaveWeekdayBlocks={handleSaveWeekdayBlocks}
+                  onSaveWeekendBlocks={handleSaveWeekendBlocks}
                   gCalToken={gCalToken}
                   calendarEvents={calendarEvents}
                   calendarLoading={calendarLoading}
                   onGCalConnect={handleGCalConnect}
                   onGCalDisconnect={handleGCalDisconnect}
+                  onGCalCreateEvent={handleGCalCreateEvent}
+                  onGCalUpdateEvent={handleGCalUpdateEvent}
+                  onGCalDeleteEvent={handleGCalDeleteEvent}
                 />
               )}
               {activeTab === 'dinheiro' && (
