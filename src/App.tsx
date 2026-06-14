@@ -100,6 +100,24 @@ export default function App() {
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }>>([]);
   const [pendingConfirmAction, setPendingConfirmAction] = useState<'reset' | 'clearWorkout' | null>(null);
 
+  // Block intentions: keyed by "YYYY-MM-DD-HH:MM" (date + block start time)
+  const [blockIntentions, setBlockIntentions] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('block_intentions') || '{}'); } catch { return {}; }
+  });
+
+  const handleSetBlockIntention = (blockStart: string, text: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `${today}-${blockStart}`;
+    const updated = { ...blockIntentions, [key]: text };
+    setBlockIntentions(updated);
+    try { localStorage.setItem('block_intentions', JSON.stringify(updated)); } catch {}
+  };
+
+  const getBlockIntention = (blockStart: string): string => {
+    const today = new Date().toISOString().slice(0, 10);
+    return blockIntentions[`${today}-${blockStart}`] || '';
+  };
+
   const isWeekend = [0, 6].includes(new Date().getDay());
 
   const [weekdayBlocks, setWeekdayBlocks] = useState<DayBlock[]>(() => {
@@ -939,6 +957,8 @@ export default function App() {
                   currentBlocks={currentBlocks}
                   onSaveWeekdayBlocks={handleSaveWeekdayBlocks}
                   onSaveWeekendBlocks={handleSaveWeekendBlocks}
+                  getBlockIntention={getBlockIntention}
+                  onSetBlockIntention={handleSetBlockIntention}
                   gCalToken={gCalToken}
                   calendarEvents={calendarEvents}
                   calendarLoading={calendarLoading}

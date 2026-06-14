@@ -17,26 +17,77 @@ export interface DayBlock {
 }
 
 export const DAY_BLOCKS: DayBlock[] = [
-  { start: "05:00", end: "06:20", label: "Rotina Matinal", hint: "Banho, leitura rápida e café sem tela. Esse bloco define o tom do dia todo.", icon: "sunrise" },
-  { start: "06:20", end: "07:00", label: "Deslocamento", hint: "Use o trajeto para ouvir um podcast ou simplesmente respirar. Não é hora de resolver problemas.", icon: "commute" },
-  { start: "07:00", end: "13:00", label: "Guanella – Manhã", hint: "Foco total nas aulas. Nos intervalos, hidrate e descanse a mente — não abra o MEI agora.", icon: "school" },
-  { start: "13:00", end: "14:20", label: "Almoço e Recarga", hint: "Coma devagar, longe da tela. Esse intervalo é combustível real para o segundo turno.", icon: "restaurant" },
-  { start: "14:20", end: "16:20", label: "Guanella – Tarde", hint: "Segundo turno — você já está no ritmo. Mantenha o foco e deixe o MEI para depois das 18h.", icon: "school" },
-  { start: "16:20", end: "17:00", label: "Deslocamento", hint: "Começa a transição mental. Pense em 1 coisa que quer resolver no MEI hoje à noite.", icon: "commute" },
-  { start: "17:00", end: "18:00", label: "Academia", hint: "Troca de roupa imediatamente ao chegar. O treino limpa o stress da escola e prepara o cérebro pro MEI.", icon: "fitness_center" },
-  { start: "18:00", end: "18:30", label: "Pausa Intencional", hint: "Entretenimento, livro ou podcast. Sem MEI ainda — esse intervalo evita o esgotamento noturno.", icon: "battery_charging_20" },
-  { start: "18:30", end: "22:00", label: "Foco no MEI", hint: "Bloco nobre de 3h30 para o Job. Defina 1 entrega prioritária antes de começar e proteja esse tempo.", icon: "laptop_chromebook" },
-  { start: "22:00", end: "23:30", label: "Vicente e Desacelerar", hint: "Presença real com Vicente. Guarde o celular e esteja disponível de verdade antes de dormir.", icon: "favorite" },
+  {
+    start: "05:00", end: "06:20", label: "Rotina Matinal", icon: "sunrise",
+    hint: "Esse silêncio da manhã é seu. Enquanto o mundo dorme, você está construindo a versão de si mesmo que o Vicente vai se orgulhar de chamar de pai."
+  },
+  {
+    start: "06:20", end: "07:00", label: "Deslocamento", icon: "commute",
+    hint: "Você não está indo trabalhar — está indo construir o homem que quer ser. Use esse trajeto com intenção, não no piloto automático."
+  },
+  {
+    start: "07:00", end: "13:00", label: "Guanella – Manhã", icon: "school",
+    hint: "Você não é só um professor. Você é a referência que alguém vai carregar pela vida inteira. Apareça inteiro hoje — eles percebem quando você está presente de verdade."
+  },
+  {
+    start: "13:00", end: "14:20", label: "Almoço e Recarga", icon: "restaurant",
+    hint: "Atletas de elite sabem que a recuperação é parte do treino. Descanse sem culpa — você vai precisar do melhor de você no segundo turno."
+  },
+  {
+    start: "14:20", end: "16:20", label: "Guanella – Tarde", icon: "school",
+    hint: "A tarde é onde a consistência vence o talento. Você ainda está aqui, entregando, quando muitos já desistiram. Isso é caráter."
+  },
+  {
+    start: "16:20", end: "17:00", label: "Deslocamento", icon: "commute",
+    hint: "A escola ficou para trás. O MEI espera. Pense em 1 coisa que você quer entregar essa noite — só uma — e deixe o resto para amanhã."
+  },
+  {
+    start: "17:00", end: "18:00", label: "Academia", icon: "fitness_center",
+    hint: "Cada série é uma promessa que você cumpre consigo mesmo. O corpo forte que você está construindo é o mesmo que vai te dar energia para o MEI, para o Vicente, para tudo."
+  },
+  {
+    start: "18:00", end: "18:30", label: "Pausa Intencional", icon: "battery_charging_20",
+    hint: "Recarregue de verdade. Esses 30 minutos não são perda de tempo — são o que separa uma noite produtiva de uma noite de esforço sem resultado."
+  },
+  {
+    start: "18:30", end: "22:00", label: "Foco no MEI", icon: "laptop_chromebook",
+    hint: "Essas 3h30 são o investimento mais importante no seu futuro. O negócio que vai te dar liberdade — e dar ao Vicente um pai realizado — é construído aqui, nessas noites."
+  },
+  {
+    start: "22:00", end: "23:30", label: "Vicente e Desacelerar", icon: "favorite",
+    hint: "O Vicente não precisa do melhor profissional do mundo. Ele precisa de você — presente, aqui, agora. Guarda o celular. Esse momento não volta."
+  },
 ];
 
 export const WEEKEND_BLOCKS: DayBlock[] = [
-  { start: "07:00", end: "09:00", label: "Manhã Tranquila", hint: "Acorde sem alarme, café com calma. Sem tela por pelo menos 30 minutos.", icon: "sunrise" },
-  { start: "09:00", end: "11:30", label: "Estudos / MEI", hint: "Aproveite a energia da manhã para avançar no que ficou pendente durante a semana.", icon: "laptop_chromebook" },
-  { start: "11:30", end: "13:00", label: "Casa e Organização", hint: "Um bloco só para manter o espaço em ordem. Ambiente arrumado = mente mais leve.", icon: "home" },
-  { start: "13:00", end: "15:00", label: "Almoço e Descanso", hint: "Coma bem, descanse de verdade. Não é fraqueza — é estratégia.", icon: "restaurant" },
-  { start: "15:00", end: "19:00", label: "Tempo Livre / Saídas", hint: "Saia, explore, encontre pessoas. Esse bloco recarrega o que a semana drena.", icon: "explore" },
-  { start: "19:00", end: "22:00", label: "Vicente e Família", hint: "Presença real. Guarde o celular e esteja disponível de verdade.", icon: "favorite" },
-  { start: "22:00", end: "23:30", label: "Desacelerar", hint: "Leitura leve, sem telas. Prepare o corpo para uma semana nova.", icon: "bedtime" },
+  {
+    start: "07:00", end: "09:00", label: "Manhã Tranquila", icon: "sunrise",
+    hint: "A semana foi intensa. Esse silêncio de fim de semana é um presente. Use-o para ouvir o que o barulho da rotina costuma abafar."
+  },
+  {
+    start: "09:00", end: "11:30", label: "Estudos / MEI", icon: "laptop_chromebook",
+    hint: "O fim de semana que você usa para avançar enquanto o mundo descansa é o diferencial que você ainda não consegue ver — mas vai sentir nos resultados."
+  },
+  {
+    start: "11:30", end: "13:00", label: "Casa e Organização", icon: "home",
+    hint: "Ambiente arrumado é mente mais livre. Você está criando as condições externas para o seu melhor trabalho interno."
+  },
+  {
+    start: "13:00", end: "15:00", label: "Almoço e Descanso", icon: "restaurant",
+    hint: "Descanso intencional não é fraqueza — é a escolha de quem pensa a longo prazo. Você está jogando um jogo longo. Cuide do jogador."
+  },
+  {
+    start: "15:00", end: "19:00", label: "Tempo Livre / Saídas", icon: "explore",
+    hint: "Viva. Explore. Ria. Esse bloco recarrega o que nenhuma planilha de produtividade consegue. Uma vida boa não é só construída — é vivida."
+  },
+  {
+    start: "19:00", end: "22:00", label: "Vicente e Família", icon: "favorite",
+    hint: "No final, o Vicente não vai lembrar das conquistas. Ele vai lembrar se o pai estava presente. Esteja aqui de verdade — sem distrações."
+  },
+  {
+    start: "22:00", end: "23:30", label: "Desacelerar", icon: "bedtime",
+    hint: "Você chegou até aqui. Semana nova começa com você descansado. Prepare o corpo e a mente — o melhor ainda está por vir."
+  },
 ];
 
 export function getActiveBlock(currentTimeStr: string, blocks: DayBlock[] = DAY_BLOCKS): DayBlock | null {

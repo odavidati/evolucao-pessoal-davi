@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft, Calendar, Loader2, MapPin, Pencil, X } from 'lucide-react';
+import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft, Calendar, Loader2, MapPin, Pencil, X, Zap } from 'lucide-react';
+import ModoFocoView from './ModoFocoView';
 import { useGoogleLogin } from '@react-oauth/google';
 import { FilaTask, EstacionamentoItem } from '../types';
 import { GCalEvent, GCalEventInput, getEventTimes, isEventNow, buildLocalISO } from '../services/googleCalendar';
@@ -29,6 +30,8 @@ interface RotinaViewProps {
   currentBlocks: DayBlock[];
   onSaveWeekdayBlocks: (blocks: DayBlock[]) => void;
   onSaveWeekendBlocks: (blocks: DayBlock[]) => void;
+  getBlockIntention: (blockStart: string) => string;
+  onSetBlockIntention: (blockStart: string, text: string) => void;
   gCalToken: string | null;
   calendarEvents: GCalEvent[];
   calendarLoading: boolean;
@@ -59,6 +62,8 @@ export default function RotinaView({
   currentBlocks,
   onSaveWeekdayBlocks,
   onSaveWeekendBlocks,
+  getBlockIntention,
+  onSetBlockIntention,
   gCalToken,
   calendarEvents,
   calendarLoading,
@@ -71,6 +76,7 @@ export default function RotinaView({
   const [currentTime, setCurrentTime] = useState('08:00');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newParkedText, setNewParkedText] = useState('');
+  const [showModoFoco, setShowModoFoco] = useState(false);
   
   const parkInputRef = useRef<HTMLInputElement>(null);
 
@@ -282,7 +288,32 @@ export default function RotinaView({
             <div className="h-full bg-brand-blue rounded-full shadow-md transition-all duration-1000" style={{ width: `${blockProgress}%` }} />
           </div>
         </div>
+
+        {/* Focus mode entry */}
+        {activeBlock && (
+          <button
+            onClick={() => setShowModoFoco(true)}
+            className="w-full h-12 rounded-2xl bg-brand-blue text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md shadow-brand-blue/25 mt-1"
+          >
+            <Zap className="w-4 h-4" />
+            Entrar em Modo Foco
+          </button>
+        )}
       </section>
+
+      {/* Modo Foco overlay */}
+      <AnimatePresence>
+        {showModoFoco && activeBlock && (
+          <ModoFocoView
+            block={activeBlock}
+            intention={getBlockIntention(activeBlock.start)}
+            currentTime={currentTime}
+            onSetIntention={(text) => onSetBlockIntention(activeBlock.start, text)}
+            onParkIdea={(text) => onAddEstacionamento(text)}
+            onClose={() => setShowModoFoco(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Next transition block card */}
       {nextBlock && (
