@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, ShoppingBag, Clock, Heart, DollarSign } from 'lucide-react';
+import { X, ShoppingBag, Clock, Heart, DollarSign, Check } from 'lucide-react';
 import { CompraEspera } from '../types';
 
 interface QueroComprarViewProps {
@@ -106,7 +106,7 @@ export default function QueroComprarView({
             animate={{ opacity: 1, scale: 1 }}
             className="p-6 glass-panel-green rounded-3xl text-emerald-950 text-center font-bold space-y-2 mt-6 border border-emerald-500/20"
           >
-            <p className="text-base text-brand-green font-black">✨ Mandou bem!</p>
+            <p className="text-base text-brand-green font-black flex items-center justify-center gap-2"><Check className="w-5 h-5" strokeWidth={3} /> Mandou bem!</p>
             <p className="text-sm font-semibold">{completedMessage}</p>
           </motion.div>
         ) : (

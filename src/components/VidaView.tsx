@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Moon, Heart, Smile, HelpCircle, Archive, Clipboard, Compass, Sparkles, CheckSquare, Power, Check, TrendingUp, Award, Activity } from 'lucide-react';
+import { Moon, Heart, Smile, HelpCircle, Archive, Clipboard, Compass, Sparkles, CheckSquare, Power, Check, TrendingUp, Award, Activity, BookOpen, Mic, Headphones, Brain, BedDouble, Home, BarChart2 } from 'lucide-react';
 import { FechamentoDia, VidaHabitos } from '../types';
 import {
   ResponsiveContainer,
@@ -47,15 +47,15 @@ export default function VidaView({
     }, 4500);
   };
 
-  const habitLabels: { key: keyof VidaHabitos; label: string; desc: string; icon: string }[] = [
-    { key: 'leitura', label: 'Leitura', desc: 'Ler 5 páginas de um bom livro físico ou digital', icon: '📖' },
-    { key: 'vicente', label: 'Estar com o Vicente', desc: 'Conversar, rir ou assistir algo sem dividirmos atenção com o celular', icon: '❤️' },
-    { key: 'espiritualidade', label: 'Espiritualidade', desc: 'Fazer uma oração, meditar ou sintonizar com o invisível', icon: '🧘' },
-    { key: 'cantoKaraoke', label: 'Cantar / Karaokê', desc: 'Soltar a voz, brincar ou ouvir uma trilha favorita', icon: '🎤' },
-    { key: 'podcast', label: 'Ouvir Podcast', desc: 'Escutar conteúdos enriquecedores correndo ou lavando louça', icon: '🎙️' },
-    { key: 'terapiaReflexao', label: 'Terapia / Reflexões', desc: 'Conversar ou ler anotações pessoais do terapeuta', icon: '🧠' },
-    { key: 'descanso', label: 'Descanso Consciente', desc: 'Deitar sem telas antes do sono definitivo', icon: '🛌' },
-    { key: 'casaMinima', label: 'Casa Mínima', desc: 'Deixar a pia e a sala minimamente organizadas para amanhã', icon: '🧼' },
+  const habitLabels: { key: keyof VidaHabitos; label: string; desc: string; icon: React.ElementType }[] = [
+    { key: 'leitura', label: 'Leitura', desc: 'Ler 5 páginas de um bom livro físico ou digital', icon: BookOpen },
+    { key: 'vicente', label: 'Estar com o Vicente', desc: 'Conversar, rir ou assistir algo sem dividirmos atenção com o celular', icon: Heart },
+    { key: 'espiritualidade', label: 'Espiritualidade', desc: 'Fazer uma oração, meditar ou sintonizar com o invisível', icon: Compass },
+    { key: 'cantoKaraoke', label: 'Cantar / Karaokê', desc: 'Soltar a voz, brincar ou ouvir uma trilha favorita', icon: Mic },
+    { key: 'podcast', label: 'Ouvir Podcast', desc: 'Escutar conteúdos enriquecedores correndo ou lavando louça', icon: Headphones },
+    { key: 'terapiaReflexao', label: 'Terapia / Reflexões', desc: 'Conversar ou ler anotações pessoais do terapeuta', icon: Brain },
+    { key: 'descanso', label: 'Descanso Consciente', desc: 'Deitar sem telas antes do sono definitivo', icon: BedDouble },
+    { key: 'casaMinima', label: 'Casa Mínima', desc: 'Deixar a pia e a sala minimamente organizadas para amanhã', icon: Home },
   ];
 
   // Generate trailing 7 days
@@ -107,7 +107,6 @@ export default function VidaView({
     });
     return {
       "hábito": h.label,
-      "icon": h.icon,
       "Dias Concluídos": completedDays,
       "Frequência %": Math.round((completedDays / 7) * 100)
     };
@@ -235,11 +234,11 @@ export default function VidaView({
               <span>Dia Lendário Concluído!</span>
               <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
             </h3>
-            <Award className="w-6 h-6 text-emerald-650 animate-bounce" />
+            <Award className="w-6 h-6 text-emerald-600 animate-bounce" />
           </div>
           
           <p className="text-base font-display font-extrabold text-text-main leading-snug">
-            Parabéns, Davi! Todos os {totalHabitCount} Hábitos de hoje foram marcados. 🏆
+            Parabéns, Davi! Todos os {totalHabitCount} Hábitos de hoje foram marcados.
           </p>
           <p className="text-[11px] text-text-sec font-bold italic">
             "A constância e o descanso consciente são os pilares da sua evolução."
@@ -380,7 +379,7 @@ export default function VidaView({
                   : 'text-text-sec hover:text-text-main'
               }`}
             >
-              📈 Aproveit. Semanal
+              <TrendingUp className="w-3 h-3 inline mr-1" />Aproveit. Semanal
             </button>
             <button
               onClick={() => setChartMode('frequencia')}
@@ -390,7 +389,7 @@ export default function VidaView({
                   : 'text-text-sec hover:text-text-main'
               }`}
             >
-              📊 Por Hábito
+              <BarChart2 className="w-3 h-3 inline mr-1" />Por Hábito
             </button>
           </div>
         </div>
@@ -481,10 +480,7 @@ export default function VidaView({
                   fontWeight="bold"
                   tickLine={false} 
                   axisLine={false}
-                  tickFormatter={(val) => {
-                    const found = habitLabels.find(h => h.label === val);
-                    return found ? `${found.icon} ${val.slice(0, 5)}...` : val.slice(0, 5);
-                  }}
+                  tickFormatter={(val) => val.slice(0, 6)}
                 />
                 <YAxis 
                   stroke="#64748b" 
@@ -588,7 +584,9 @@ export default function VidaView({
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-lg bg-[#221B13] p-1.5 rounded-xl block shrink-0">{item.icon}</span>
+                    <div className="bg-[#221B13] p-1.5 rounded-xl shrink-0 flex items-center justify-center">
+                      <item.icon className="w-4 h-4 text-amber-400" />
+                    </div>
                     <div>
                       <h4 className={`text-sm font-bold ${isDone ? 'line-through text-amber-400/80' : 'text-white'}`}>
                         {item.label}

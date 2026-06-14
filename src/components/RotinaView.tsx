@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PlayCircle, Hourglass, Trash2, Plus, CornerDownRight, AlertCircle, Sparkles, HelpCircle, Check, HelpCircle as HelpIcon, RefreshCw } from 'lucide-react';
-import { FilaTask, EstacionamentoItem, AppState } from '../types';
+import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft } from 'lucide-react';
+import { FilaTask, EstacionamentoItem } from '../types';
 import { getActiveBlock, getNextBlock } from '../data/initialData';
 
 interface RotinaViewProps {
@@ -63,6 +63,17 @@ export default function RotinaView({
   const activeBlock = getActiveBlock(currentTime);
   const nextBlock = getNextBlock(currentTime);
 
+  const blockProgress = useMemo(() => {
+    if (!activeBlock) return 0;
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const start = toMin(activeBlock.start);
+    const end = toMin(activeBlock.end);
+    const now = toMin(currentTime);
+    if (now <= start) return 0;
+    if (now >= end) return 100;
+    return Math.round(((now - start) / (end - start)) * 100);
+  }, [activeBlock, currentTime]);
+
   const handleCreateFilaTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
@@ -97,7 +108,7 @@ export default function RotinaView({
             </h2>
           </div>
           <div className="w-12 h-12 rounded-3xl bg-brand-blue/15 flex items-center justify-center text-brand-blue shadow-inner">
-            <span className="text-xl">💼</span>
+            <Briefcase className="w-6 h-6" />
           </div>
         </div>
         <p className="text-sm text-text-sec font-semibold leading-relaxed">
@@ -111,7 +122,7 @@ export default function RotinaView({
             <span>{activeBlock ? "Falta pouco" : "Livre"}</span>
           </div>
           <div className="h-3 w-full bg-brand-blue/15 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-blue rounded-full w-[65%] shadow-md animate-pulse" />
+            <div className="h-full bg-brand-blue rounded-full shadow-md transition-all duration-1000" style={{ width: `${blockProgress}%` }} />
           </div>
         </div>
       </section>
@@ -120,7 +131,7 @@ export default function RotinaView({
       {nextBlock && (
         <section className="glass-panel-blue rounded-2xl p-4 flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-white/60 border border-white/50 flex items-center justify-center text-brand-blue shadow-sm shrink-0">
-            <span>🔄</span>
+            <ArrowRightLeft className="w-4 h-4" />
           </div>
           <div>
             <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider block">Próxima transição</span>

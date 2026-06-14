@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { DollarSign, ShieldCheck, Hourglass, PlusCircle, ShoppingBag, PiggyBank, History, Eye, ArrowRight, ArrowDownRight, Edit3, Check } from 'lucide-react';
+import { DollarSign, ShieldCheck, Hourglass, PlusCircle, ShoppingBag, PiggyBank, History, CreditCard, Edit3, Check, X } from 'lucide-react';
 import { AppState, CompraEspera, LancamentoRapido } from '../types';
 
 interface DinheiroViewProps {
@@ -28,6 +28,22 @@ export default function DinheiroView({
 }: DinheiroViewProps) {
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [tempBalance, setTempBalance] = useState(String(disponivelSeguro));
+  const [showBoletoForm, setShowBoletoForm] = useState(false);
+  const [boletoNome, setBoletoNome] = useState('');
+  const [boletoValor, setBoletoValor] = useState('');
+
+  const handlePagarBoleto = () => {
+    const amt = parseFloat(boletoValor) || 0;
+    if (!boletoNome.trim() || amt <= 0) {
+      if (showToast) showToast('Preencha o nome e o valor do boleto.', 'warning');
+      return;
+    }
+    onSetDisponivelSeguro(disponivelSeguro - amt);
+    if (showToast) showToast(`Pago: ${boletoNome} — R$ ${amt.toFixed(2)} registrado!`, 'success');
+    setBoletoNome('');
+    setBoletoValor('');
+    setShowBoletoForm(false);
+  };
 
   const handleUpdateBalance = () => {
     const val = parseFloat(tempBalance) || 0;
@@ -166,24 +182,58 @@ export default function DinheiroView({
           </button>
           
           <button
-            onClick={() => {
-              const payment = prompt('O que você pagou? (Ex: Conta de Luz)');
-              const amtStr = prompt('Qual o valor?');
-              const amt = parseFloat(amtStr || '0') || 0;
-              if (payment && amt > 0) {
-                onResolveCompraEspera('custom', 'comprado'); // triggers update
-                onSetDisponivelSeguro(disponivelSeguro - amt);
-                if (showToast) {
-                  showToast(`Pago: ${payment} de R$ ${amt.toFixed(2)} registrado!`, 'success');
-                }
-              }
-            }}
+            onClick={() => setShowBoletoForm(v => !v)}
             className="h-12 bg-white/45 border border-white/50 text-text-main font-bold text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
           >
-            💳 Pagar Boleto
+            <CreditCard className="w-4 h-4 text-brand-blue" />
+            Pagar Boleto
           </button>
         </div>
       </section>
+
+      {/* Boleto inline form */}
+      {showBoletoForm && (
+        <motion.section
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel rounded-3xl p-5 space-y-3 border border-brand-blue/20"
+        >
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-base text-text-main flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-brand-blue" />
+              Registrar Pagamento
+            </h4>
+            <button onClick={() => setShowBoletoForm(false)} className="text-text-sec hover:text-text-main">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={boletoNome}
+            onChange={e => setBoletoNome(e.target.value)}
+            placeholder="O que você pagou? (Ex: Conta de Luz)"
+            className="w-full h-11 px-4 rounded-xl border border-white/40 bg-white/20 text-text-main focus:outline-none focus:border-brand-blue text-sm font-bold placeholder-gray-500"
+          />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sec font-bold text-sm">R$</span>
+              <input
+                type="number"
+                value={boletoValor}
+                onChange={e => setBoletoValor(e.target.value)}
+                placeholder="0,00"
+                className="w-full h-11 pl-9 pr-3 rounded-xl border border-white/40 bg-white/20 text-text-main focus:outline-none focus:border-brand-blue text-sm font-bold placeholder-gray-500"
+              />
+            </div>
+            <button
+              onClick={handlePagarBoleto}
+              className="h-11 px-5 bg-brand-blue text-white rounded-xl font-bold text-sm active:scale-95 transition-transform"
+            >
+              Registrar
+            </button>
+          </div>
+        </motion.section>
+      )}
 
       {/* Compras em espera section */}
       {comprasEspera.length > 0 && (

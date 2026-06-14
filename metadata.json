@@ -1,0 +1,6 @@
+{
+  "name": "Evolução Pessoal",
+  "description": "Aplicativo pessoal para Davi se situar na rotina, reduzir sobrecarga mental, criar hábitos, cuidar do corpo, organizar o dinheiro e fortalecer a presença na vida.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

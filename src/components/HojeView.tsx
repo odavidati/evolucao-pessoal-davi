@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sun, Moon, Sunrise, Coffee, Activity, ArrowRight, HelpCircle, Heart, CheckCircle2, Map, ShieldAlert, Sparkles, UserCheck, Wind, Smile, ThumbsUp } from 'lucide-react';
+import { Sun, Moon, Sunrise, Coffee, Activity, ArrowRight, HelpCircle, Heart, CheckCircle2, Map, ShieldAlert, Sparkles, UserCheck, Wind, Smile, ThumbsUp, Zap, Brain, Lightbulb, Home, Users, Dumbbell } from 'lucide-react';
 import { DailyCheckIn, EssentialItems } from '../types';
 import { getActiveBlock, getNextBlock, DAY_BLOCKS } from '../data/initialData';
 
@@ -144,13 +144,15 @@ export default function HojeView({
   const tipIndex = (dayOfMonth + monthOfYr * 31) % TIPS.length;
   const currentTipText = TIPS[tipIndex];
 
-  // Quick check-in category metrics
-  const checkInCategories: { key: keyof DailyCheckIn; label: string; emojis: string[] }[] = [
-    { key: 'energia', label: '⚡ Energia', emojis: ['🔋', '🥱', '😐', '🔋', '⚡'] },
-    { key: 'mente', label: '🧠 Mente', emojis: ['🌧️', '🌫️', '🧘', '💡', '✨'] },
-    { key: 'ansiedade', label: '🍃 Calma', emojis: ['🌪️', '🌾', '🌱', '☀️', '🕊️'] },
-    { key: 'sono', label: '💤 Sono', emojis: ['🥱', '🥴', '😴', '🛌', '👑'] },
-    { key: 'corpo', label: '💪 Corpo', emojis: ['🤕', '🧱', '🚶', '🤸', '⚡'] }
+  const scoreColors = ['text-red-500', 'text-orange-500', 'text-amber-500', 'text-lime-600', 'text-emerald-600'];
+  const scoreDots = ['bg-red-400', 'bg-orange-400', 'bg-amber-400', 'bg-lime-500', 'bg-emerald-500'];
+
+  const checkInCategories: { key: keyof DailyCheckIn; label: string; icon: React.ElementType; colorClass: string }[] = [
+    { key: 'energia', label: 'Energia', icon: Zap, colorClass: 'text-amber-500 bg-amber-500/10' },
+    { key: 'mente', label: 'Mente', icon: Brain, colorClass: 'text-brand-blue bg-brand-blue/10' },
+    { key: 'ansiedade', label: 'Calma', icon: Wind, colorClass: 'text-emerald-600 bg-emerald-500/10' },
+    { key: 'sono', label: 'Sono', icon: Moon, colorClass: 'text-brand-purple bg-brand-purple/10' },
+    { key: 'corpo', label: 'Corpo', icon: Activity, colorClass: 'text-pink-600 bg-pink-500/10' }
   ];
 
   return (
@@ -300,7 +302,7 @@ export default function HojeView({
               </div>
               <button
                 onClick={() => setBreathingState('idle')}
-                className="mt-1 text-[10px] bg-emerald-650/10 hover:bg-emerald-650/15 text-emerald-800 font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+                className="mt-1 text-[10px] bg-emerald-600/10 hover:bg-emerald-600/15 text-emerald-800 font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all"
               >
                 Voltar
               </button>
@@ -327,8 +329,9 @@ export default function HojeView({
             </div>
           </div>
           {activeBlock && (
-            <p className="text-sm text-text-sec font-medium leading-relaxed mt-3.5 border-t border-white/20 pt-3">
-              💡 {activeBlock.hint}
+            <p className="text-sm text-text-sec font-medium leading-relaxed mt-3.5 border-t border-white/20 pt-3 flex items-start gap-2">
+              <Lightbulb className="w-4 h-4 text-brand-amber shrink-0 mt-0.5" />
+              {activeBlock.hint}
             </p>
           )}
         </div>
@@ -410,14 +413,19 @@ export default function HojeView({
         </div>
 
         <div className="space-y-4 divide-y divide-gray-50">
-          {checkInCategories.map(({ key, label, emojis }) => {
+          {checkInCategories.map(({ key, label, icon: IconComp, colorClass }) => {
             const currentScore = checkIn[key];
             return (
               <div key={key} className="pt-3.5 first:pt-0 space-y-2">
                 <div className="flex justify-between items-center text-sm font-semibold">
-                  <span className="text-text-main">{label}</span>
+                  <span className="text-text-main flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${colorClass}`}>
+                      <IconComp className="w-3.5 h-3.5" />
+                    </div>
+                    {label}
+                  </span>
                   <span className="text-xs text-brand-blue bg-brand-blue/5 px-2.5 py-0.5 rounded-full font-bold">
-                    Nota {currentScore || '...'}
+                    {currentScore ? `${currentScore}/5` : '—'}
                   </span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5 p-1 bg-white/30 rounded-2xl border border-white/45">
@@ -428,14 +436,16 @@ export default function HojeView({
                         key={score}
                         type="button"
                         onClick={() => onUpdateCheckIn(key, score)}
-                        className={`h-11 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-all ${
+                        className={`h-11 rounded-xl font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                           isSelected
                             ? 'bg-brand-blue text-white shadow-sm scale-105'
-                            : 'hover:bg-gray-100 text-text-sec text-base'
+                            : 'hover:bg-white/50'
                         }`}
                       >
-                        <span className="text-base">{emojis[score - 1]}</span>
-                        <span className="text-[9px] mt-0.5 font-sans font-bold opacity-80">{score}</span>
+                        <span className={`text-sm font-black ${isSelected ? 'text-white' : scoreColors[score - 1]}`}>
+                          {score}
+                        </span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white/60' : scoreDots[score - 1]}`} />
                       </button>
                     );
                   })}
@@ -466,10 +476,10 @@ export default function HojeView({
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base ${
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 essentials.corpo ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-blue/10 text-brand-blue'
               }`}>
-                ❤️
+                <Dumbbell className="w-5 h-5" />
               </div>
               <div>
                 <p className={`font-semibold text-base ${essentials.corpo ? 'line-through text-[#5c6579] opacity-60' : 'text-text-main'}`}>
@@ -495,10 +505,10 @@ export default function HojeView({
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base ${
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 essentials.casaMinima ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-purple/10 text-brand-purple'
               }`}>
-                🧼
+                <Home className="w-5 h-5" />
               </div>
               <div>
                 <p className={`font-semibold text-base ${essentials.casaMinima ? 'line-through text-[#5c6579] opacity-60' : 'text-text-main'}`}>
@@ -524,10 +534,10 @@ export default function HojeView({
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base ${
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 essentials.presencaVicente ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-500'
               }`}>
-                👩‍❤️‍👨
+                <Users className="w-5 h-5" />
               </div>
               <div>
                 <p className={`font-semibold text-base ${essentials.presencaVicente ? 'line-through text-[#5c6579] opacity-60' : 'text-text-main'}`}>

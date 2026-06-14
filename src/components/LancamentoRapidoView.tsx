@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, ArrowDownCircle, ArrowUpCircle, CheckSquare, Hourglass, Send, Sparkles } from 'lucide-react';
+import { X, ArrowDownCircle, ArrowUpCircle, CheckSquare, Hourglass, Send, Check } from 'lucide-react';
 import { LancamentoRapido } from '../types';
 
 interface LancamentoRapidoViewProps {
@@ -84,7 +84,7 @@ export default function LancamentoRapidoView({
             animate={{ opacity: 1, scale: 1 }}
             className="p-6 glass-panel-blue border border-brand-blue/30 rounded-3xl text-[#1e293b] text-center font-bold space-y-2 mt-12"
           >
-            <p className="text-base text-brand-blue font-extrabold">✓ Lançado!</p>
+            <p className="text-base text-brand-blue font-extrabold flex items-center justify-center gap-2"><Check className="w-5 h-5" strokeWidth={3} /> Lançado!</p>
             <p className="text-sm font-semibold">Seu dinheiro sem neblina e sob total controle sem chateações.</p>
           </motion.div>
         ) : (
@@ -127,7 +127,7 @@ export default function LancamentoRapidoView({
                     onClick={() => selectExample(ex)}
                     className="px-3.5 py-1.5 bg-white/35 border border-white/45 rounded-xl text-xs font-bold text-text-main hover:bg-white/45 active:scale-95 transition-all text-left"
                   >
-                    💡 {ex}
+                    {ex}
                   </button>
                 ))}
               </div>

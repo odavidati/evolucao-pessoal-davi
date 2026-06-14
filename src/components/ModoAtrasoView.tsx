@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Clock, AlertTriangle, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, Clock, AlertTriangle, ShieldCheck, Check, Sparkles, Star } from 'lucide-react';
 import { CustomChecklistItem } from '../types';
 
 interface ModoAtrasoViewProps {
@@ -83,7 +83,7 @@ export default function ModoAtrasoView({
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 p-4 bg-brand-blue text-white rounded-2xl shadow-md text-center text-sm font-semibold"
           >
-            🚀 Vai. O resto fica para depois!
+            Vai. O resto fica para depois!
           </motion.div>
         )}
 
@@ -118,10 +118,10 @@ export default function ModoAtrasoView({
                     }`}>
                       {item.checked ? (
                         <Check className="w-5 h-5 text-gray-400" strokeWidth={3} />
+                      ) : item.essential ? (
+                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                       ) : (
-                        <span className="font-bold text-xs py-1">
-                          {item.essential ? '⭐' : '✓'}
-                        </span>
+                        <Check className="w-4 h-4 opacity-30" strokeWidth={2.5} />
                       )}
                     </div>
                     <div>

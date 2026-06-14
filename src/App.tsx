@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookOpen, AlertTriangle } from 'lucide-react';
+import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookOpen, AlertTriangle, Zap, Smartphone, X } from 'lucide-react';
 
 import { AppState, DailyCheckIn, EssentialItems, CustomChecklistItem, BodyMetrics, FechamentoDia, VidaHabitos } from './types';
 import { DOMESTIC_TASKS, INITIAL_CHECKLIST_ATRASO } from './data/initialData';
@@ -96,8 +96,11 @@ export default function App() {
     'lost' | 'atraso' | 'comprar' | 'lancamento' | null
   >(null);
 
-  // App notification toasts state
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }>>([]);
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<'reset' | 'clearWorkout' | null>(null);
+  const [showPwaTip, setShowPwaTip] = useState(() => {
+    try { return !localStorage.getItem('pwa_tip_dismissed'); } catch { return true; }
+  });
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success') => {
     const id = String(Date.now() + Math.random());
@@ -166,13 +169,21 @@ export default function App() {
   };
 
   const handleResetApp = () => {
-    if (confirm("Quer realmente zerar seus dados locais do aplicativo?")) {
+    setPendingConfirmAction('reset');
+  };
+
+  const handleConfirmAction = () => {
+    if (pendingConfirmAction === 'reset') {
       localStorage.removeItem(STORAGE_KEY);
       setState({ ...DEFAULT_STATE, hasEnteredSplash: false });
       setActiveTab('hoje');
       setActiveOverlay(null);
       showToast("Dados resetados para o padrão limpo.", "info");
+    } else if (pendingConfirmAction === 'clearWorkout') {
+      updateState(prev => ({ ...prev, exerciseLogs: {}, completedWorkouts: {} }));
+      showToast("Histórico de treino limpo com segurança.", "info");
     }
+    setPendingConfirmAction(null);
   };
 
   // Resolving specific daily elements
@@ -378,14 +389,7 @@ export default function App() {
   };
 
   const handleClearWorkoutData = () => {
-    if (confirm("Quer realmente apagar todo o seu histórico de treinos e cargas das máquinas?")) {
-      updateState(prev => ({
-        ...prev,
-        exerciseLogs: {},
-        completedWorkouts: {}
-      }));
-      showToast("Histórico de treino limpo com segurança.", "info");
-    }
+    setPendingConfirmAction('clearWorkout');
   };
 
   const handleImportState = (newState: AppState) => {
@@ -466,9 +470,9 @@ export default function App() {
       }
 
       // Add fresh log history entry
-      const logText = action === 'desistido' 
-        ? `🔥 Resistiu: Desistiu de ${item?.name}` 
-        : `💰 Comprou após espera: ${item?.name}`;
+      const logText = action === 'desistido'
+        ? `Resistiu: Desistiu de ${item?.name}`
+        : `Comprou após espera: ${item?.name}`;
 
       const log = {
         id: String(Date.now()),
@@ -697,6 +701,40 @@ export default function App() {
         </AnimatePresence>
       </div>
 
+      {/* Inline confirmation dialog */}
+      {pendingConfirmAction && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center p-4 bg-black/25 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-sm bg-white rounded-3xl p-6 space-y-4 shadow-2xl"
+          >
+            <h3 className="font-bold text-text-main text-lg">
+              {pendingConfirmAction === 'reset' ? 'Zerar todos os dados?' : 'Apagar histórico de treinos?'}
+            </h3>
+            <p className="text-sm text-text-sec">
+              {pendingConfirmAction === 'reset'
+                ? 'Esta ação é irreversível. Todos os seus dados locais serão perdidos.'
+                : 'Histórico de exercícios e cargas serão perdidos permanentemente.'}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setPendingConfirmAction(null)}
+                className="h-12 rounded-2xl border border-gray-200 font-bold text-sm text-text-main bg-white active:scale-95 transition-transform"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className="h-12 rounded-2xl bg-red-500 text-white font-bold text-sm active:scale-95 transition-transform"
+              >
+                Confirmar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Background colorful glowing blur circles (blobs) matching high-fidelity Frosted Glass */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[10%] -left-20 w-[350px] h-[350px] rounded-full bg-brand-blue/12 blur-[120px] animate-pulse" />
@@ -711,8 +749,8 @@ export default function App() {
         {/* Top bar with mini avatar logo and settings controller updated with transparent frosted rules */}
         <header className="fixed top-0 left-0 right-0 max-w-md mx-auto bg-white/40 backdrop-blur-[24px] z-40 h-16 px-6 flex items-center justify-between border-b border-white/20">
           <div className="flex items-center gap-2 select-none">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-white/60 border border-white/50 flex items-center justify-center font-display font-black text-xs text-brand-blue shadow-inner shrink-0">
-              ⚡
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-white/60 border border-white/50 flex items-center justify-center text-brand-blue shadow-inner shrink-0">
+              <Zap className="w-4 h-4" />
             </div>
             <h1 className="text-base font-display font-black text-text-main tracking-tight">
               Evolução Pessoal
@@ -866,10 +904,22 @@ export default function App() {
 
         </nav>
 
-        {/* Minimalist PWA Installation / Safari guidelines tooltip */}
-        <div className="absolute top-[72px] right-2 bg-text-main text-white text-[10px] py-1 px-2.5 rounded-lg pointer-events-none select-none z-30 opacity-70 text-right animate-bounce">
-          💡 Para iPhone: Safari {`->`} Compartilhar {`->`} Tela de Início
-        </div>
+        {/* PWA Installation tooltip — shown once, dismissible */}
+        {showPwaTip && (
+          <div className="absolute top-[72px] right-2 bg-text-main text-white text-[10px] py-1.5 px-3 rounded-xl z-30 opacity-90 flex items-center gap-2 shadow-md max-w-[220px]">
+            <Smartphone className="w-3 h-3 shrink-0" />
+            <span>Safari → Compartilhar → Tela de Início</span>
+            <button
+              onClick={() => {
+                try { localStorage.setItem('pwa_tip_dismissed', '1'); } catch {}
+                setShowPwaTip(false);
+              }}
+              className="ml-1 opacity-70 hover:opacity-100 shrink-0"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
