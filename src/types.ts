@@ -82,6 +82,42 @@ export interface VidaHabitos {
   casaMinima: boolean;
 }
 
+export type MetaCategoria = 'profissional' | 'financeiro' | 'saude' | 'familia' | 'pessoal' | 'espiritual';
+export type MetaStatus = 'ativa' | 'concluida' | 'pausada';
+
+export interface MetaAcao {
+  id: string;
+  texto: string;
+  concluida: boolean;
+}
+
+export interface Meta {
+  id: string;
+  titulo: string;
+  categoria: MetaCategoria;
+  prazo: string; // YYYY-MM-DD
+  descricao?: string;
+  visao?: string; // frase de visualização "Eu sou / Eu tenho / Eu vivo..."
+  acoes: MetaAcao[]; // máx 3 — BIG 3 de Paulo Vieira
+  status: MetaStatus;
+  criadaEm: string;
+}
+
+export type LivroStatus = 'lendo' | 'concluido' | 'lista';
+
+export interface Livro {
+  id: string;
+  titulo: string;
+  autor: string;
+  status: LivroStatus;
+  totalPaginas?: number;
+  paginaAtual?: number;
+  dataInicio?: string;
+  dataConclusao?: string;
+  insights: string[];
+  avaliacao?: 1 | 2 | 3 | 4 | 5;
+}
+
 // Global App State to hold all properties synced to localStorage
 export interface AppState {
   hasEnteredSplash: boolean;
@@ -103,4 +139,6 @@ export interface AppState {
   lancamentos: LancamentoRapido[];
   exerciseLogs?: Record<string, { completed: boolean; weight: string; notes: string }>; // key: yyyy-mm-dd_exerciseId
   completedWorkouts?: Record<string, { completed: boolean; type: string; name?: string }>; // key: yyyy-mm-dd
+  metas: Meta[];
+  livros: Livro[];
 }

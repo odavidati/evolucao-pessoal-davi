@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookOpen, AlertTriangle, Zap, Smartphone, X } from 'lucide-react';
+import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookOpen, AlertTriangle, Zap, Smartphone, X, Target } from 'lucide-react';
 
-import { AppState, DailyCheckIn, EssentialItems, CustomChecklistItem, BodyMetrics, FechamentoDia, VidaHabitos } from './types';
+import { AppState, DailyCheckIn, EssentialItems, CustomChecklistItem, BodyMetrics, FechamentoDia, VidaHabitos, Meta, MetaAcao, Livro } from './types';
 import { DOMESTIC_TASKS, INITIAL_CHECKLIST_ATRASO, DAY_BLOCKS, WEEKEND_BLOCKS, DayBlock } from './data/initialData';
 import { GCalEvent, GCalEventInput, fetchTodayCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getCachedEvents, setCachedEvents } from './services/googleCalendar';
 
@@ -24,6 +24,7 @@ import CorpoView from './components/CorpoView';
 import RotinaView from './components/RotinaView';
 import DinheiroView from './components/DinheiroView';
 import VidaView from './components/VidaView';
+import VisaoView from './components/VisaoView';
 
 const STORAGE_KEY = 'evolucao_pessoal_davi_state_v1';
 
@@ -61,7 +62,34 @@ const DEFAULT_STATE: AppState = {
   comprasEspera: [],
   lancamentos: [],
   exerciseLogs: {},
-  completedWorkouts: {}
+  completedWorkouts: {},
+  metas: [],
+  livros: [
+    {
+      id: 'livro_1',
+      titulo: '12 Princípios para uma Vida Extraordinária',
+      autor: 'Paulo Vieira',
+      status: 'lendo',
+      insights: [],
+      dataInicio: new Date().toISOString().slice(0, 10),
+    },
+    {
+      id: 'livro_2',
+      titulo: 'O Poder da Ação',
+      autor: 'Paulo Vieira',
+      status: 'lendo',
+      insights: [],
+      dataInicio: new Date().toISOString().slice(0, 10),
+    },
+    {
+      id: 'livro_3',
+      titulo: 'Milagre da Manhã',
+      autor: 'Hal Elrod',
+      status: 'concluido',
+      insights: ['As primeiras horas do dia determinam a qualidade do dia inteiro', 'SAVERS: Silence, Affirmations, Visualization, Exercise, Reading, Scribing'],
+      avaliacao: 5,
+    },
+  ],
 };
 
 // Simple helper to fetch today's date in yyyy-mm-dd format
@@ -90,7 +118,7 @@ export function parseMoneyValue(text: string): number | undefined {
 
 export default function App() {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
-  const [activeTab, setActiveTab] = useState<'hoje' | 'corpo' | 'rotina' | 'dinheiro' | 'vida'>('hoje');
+  const [activeTab, setActiveTab] = useState<'hoje' | 'corpo' | 'rotina' | 'dinheiro' | 'vida' | 'visao'>('hoje');
   
   // Overlay flows (Hiding standard nav tabs when active)
   const [activeOverlay, setActiveOverlay] = useState<
@@ -526,6 +554,59 @@ export default function App() {
     } catch {
       showToast('Erro ao remover evento.', 'error');
     }
+  };
+
+  // Metas handlers
+  const handleAddMeta = (meta: Omit<Meta, 'id' | 'criadaEm'>) => {
+    const nova: Meta = { ...meta, id: `meta_${Date.now()}`, criadaEm: new Date().toISOString() };
+    updateState(prev => ({ ...prev, metas: [...(prev.metas || []), nova] }));
+  };
+
+  const handleUpdateMeta = (id: string, changes: Partial<Meta>) => {
+    updateState(prev => ({ ...prev, metas: (prev.metas || []).map(m => m.id === id ? { ...m, ...changes } : m) }));
+  };
+
+  const handleDeleteMeta = (id: string) => {
+    updateState(prev => ({ ...prev, metas: (prev.metas || []).filter(m => m.id !== id) }));
+  };
+
+  const handleToggleMetaAcao = (metaId: string, acaoId: string) => {
+    updateState(prev => ({
+      ...prev,
+      metas: (prev.metas || []).map(m =>
+        m.id === metaId
+          ? { ...m, acoes: m.acoes.map(a => a.id === acaoId ? { ...a, concluida: !a.concluida } : a) }
+          : m
+      )
+    }));
+  };
+
+  // Livros handlers
+  const handleAddLivro = (livro: Omit<Livro, 'id'>) => {
+    const novo: Livro = { ...livro, id: `livro_${Date.now()}` };
+    updateState(prev => ({ ...prev, livros: [...(prev.livros || []), novo] }));
+  };
+
+  const handleUpdateLivro = (id: string, changes: Partial<Livro>) => {
+    updateState(prev => ({ ...prev, livros: (prev.livros || []).map(l => l.id === id ? { ...l, ...changes } : l) }));
+  };
+
+  const handleDeleteLivro = (id: string) => {
+    updateState(prev => ({ ...prev, livros: (prev.livros || []).filter(l => l.id !== id) }));
+  };
+
+  const handleAddInsight = (livroId: string, insight: string) => {
+    updateState(prev => ({
+      ...prev,
+      livros: (prev.livros || []).map(l => l.id === livroId ? { ...l, insights: [...l.insights, insight] } : l)
+    }));
+  };
+
+  const handleRemoveInsight = (livroId: string, idx: number) => {
+    updateState(prev => ({
+      ...prev,
+      livros: (prev.livros || []).map(l => l.id === livroId ? { ...l, insights: l.insights.filter((_, i) => i !== idx) } : l)
+    }));
   };
 
   const handleImportState = (newState: AppState) => {
@@ -982,6 +1063,21 @@ export default function App() {
                   showToast={showToast}
                 />
               )}
+              {activeTab === 'visao' && (
+                <VisaoView
+                  metas={state.metas || []}
+                  livros={state.livros || []}
+                  onAddMeta={handleAddMeta}
+                  onUpdateMeta={handleUpdateMeta}
+                  onDeleteMeta={handleDeleteMeta}
+                  onToggleMetaAcao={handleToggleMetaAcao}
+                  onAddLivro={handleAddLivro}
+                  onUpdateLivro={handleUpdateLivro}
+                  onDeleteLivro={handleDeleteLivro}
+                  onAddInsight={handleAddInsight}
+                  onRemoveInsight={handleRemoveInsight}
+                />
+              )}
               {activeTab === 'vida' && (
                 <VidaView
                   fechamentoHoje={fechamentoHojeParsed}
@@ -1041,6 +1137,17 @@ export default function App() {
           >
             <DollarSign className="w-5 h-5 mb-0.5" />
             <span className="text-[10px] font-bold tracking-tight">Dinheiro</span>
+          </button>
+
+          {/* Visão */}
+          <button
+            onClick={() => setActiveTab('visao')}
+            className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl active:scale-90 transition-all ${
+              activeTab === 'visao' ? 'text-brand-blue bg-white/60 shadow-sm border border-white/55 font-extrabold' : 'text-text-sec opacity-70'
+            }`}
+          >
+            <Target className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] font-bold tracking-tight">Visão</span>
           </button>
 
           {/* Vida */}
