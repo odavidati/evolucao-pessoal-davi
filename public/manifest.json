@@ -1,0 +1,25 @@
+{
+  "name": "Evolução Pessoal",
+  "short_name": "Evolução",
+  "description": "Aplicativo pessoal para Davi se situar na rotina, reduzir a sobrecarga mental e voltar para si.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9FF",
+  "theme_color": "#0051DF",
+  "orientation": "portrait-primary",
+  "categories": ["utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
