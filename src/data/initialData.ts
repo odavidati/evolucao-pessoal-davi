@@ -17,12 +17,16 @@ export interface DayBlock {
 }
 
 export const DAY_BLOCKS: DayBlock[] = [
-  { start: "05:00", end: "06:30", label: "Manhã e saída", hint: "Acorde sem pressa, tome seu café e faça o checklist de saída.", icon: "sunrise" },
-  { start: "07:00", end: "16:20", label: "Colégio", hint: "Foco no colégio. Respire fundo nos intervalos, beba água.", icon: "school" },
-  { start: "16:20", end: "17:30", label: "Transição", hint: "Não vire direto prestador de serviço. Faça uma pausa de 15 min.", icon: "battery_charging_20" },
-  { start: "18:00", end: "19:00", label: "Clientes", hint: "Marketing com foco total de 1 hora. Evite iniciar tudo ao mesmo tempo.", icon: "laptop_chromebook" },
-  { start: "19:00", end: "20:30", label: "Corpo / Academia", hint: "Hora de movimentar o esqueleto e limpar a mente do trabalho.", icon: "fitness_center" },
-  { start: "21:30", end: "23:00", label: "Vicente, casa e desacelerar", hint: "Presença real. Guarde o celular e esteja disponível de verdade.", icon: "favorite" }
+  { start: "05:00", end: "06:20", label: "Rotina Matinal", hint: "Banho, leitura rápida e café sem tela. Esse bloco define o tom do dia todo.", icon: "sunrise" },
+  { start: "06:20", end: "07:00", label: "Deslocamento", hint: "Use o trajeto para ouvir um podcast ou simplesmente respirar. Não é hora de resolver problemas.", icon: "commute" },
+  { start: "07:00", end: "13:00", label: "Guanella – Manhã", hint: "Foco total nas aulas. Nos intervalos, hidrate e descanse a mente — não abra o MEI agora.", icon: "school" },
+  { start: "13:00", end: "14:20", label: "Almoço e Recarga", hint: "Coma devagar, longe da tela. Esse intervalo é combustível real para o segundo turno.", icon: "restaurant" },
+  { start: "14:20", end: "16:20", label: "Guanella – Tarde", hint: "Segundo turno — você já está no ritmo. Mantenha o foco e deixe o MEI para depois das 18h.", icon: "school" },
+  { start: "16:20", end: "17:00", label: "Deslocamento", hint: "Começa a transição mental. Pense em 1 coisa que quer resolver no MEI hoje à noite.", icon: "commute" },
+  { start: "17:00", end: "18:00", label: "Academia", hint: "Troca de roupa imediatamente ao chegar. O treino limpa o stress da escola e prepara o cérebro pro MEI.", icon: "fitness_center" },
+  { start: "18:00", end: "18:30", label: "Pausa Intencional", hint: "Entretenimento, livro ou podcast. Sem MEI ainda — esse intervalo evita o esgotamento noturno.", icon: "battery_charging_20" },
+  { start: "18:30", end: "22:00", label: "Foco no MEI", hint: "Bloco nobre de 3h30 para o Job. Defina 1 entrega prioritária antes de começar e proteja esse tempo.", icon: "laptop_chromebook" },
+  { start: "22:00", end: "23:30", label: "Vicente e Desacelerar", hint: "Presença real com Vicente. Guarde o celular e esteja disponível de verdade antes de dormir.", icon: "favorite" },
 ];
 
 export function getActiveBlock(currentTimeStr: string): DayBlock | null {

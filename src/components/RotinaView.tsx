@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft } from 'lucide-react';
+import { Hourglass, Trash2, Plus, AlertCircle, Briefcase, Check, RefreshCw, ArrowRightLeft, Calendar, Loader2, WifiOff, MapPin } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
 import { FilaTask, EstacionamentoItem } from '../types';
+import { GCalEvent, getEventTimes, isEventNow } from '../services/googleCalendar';
 import { getActiveBlock, getNextBlock } from '../data/initialData';
 
 interface RotinaViewProps {
@@ -21,6 +23,11 @@ interface RotinaViewProps {
   
   onOpenModoAtraso: () => void;
   onOpenEstouPerdido: () => void;
+  gCalToken: string | null;
+  calendarEvents: GCalEvent[];
+  calendarLoading: boolean;
+  onGCalConnect: (token: string) => void;
+  onGCalDisconnect: () => void;
 }
 
 export default function RotinaView({
@@ -36,13 +43,24 @@ export default function RotinaView({
   onToggleDomestica,
   onRotateDomestica,
   onOpenModoAtraso,
-  onOpenEstouPerdido
+  onOpenEstouPerdido,
+  gCalToken,
+  calendarEvents,
+  calendarLoading,
+  onGCalConnect,
+  onGCalDisconnect,
 }: RotinaViewProps) {
   const [currentTime, setCurrentTime] = useState('08:00');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newParkedText, setNewParkedText] = useState('');
   
   const parkInputRef = useRef<HTMLInputElement>(null);
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: (res) => onGCalConnect(res.access_token),
+    onError: () => {},
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+  });
 
   // Sync clock
   useEffect(() => {
@@ -141,6 +159,106 @@ export default function RotinaView({
           </div>
         </section>
       )}
+
+      {/* Google Calendar Integration */}
+      <section className="space-y-3">
+        {!gCalToken ? (
+          <div className="glass-panel rounded-3xl p-5 border border-dashed border-brand-blue/30 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-brand-blue/10 flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5 text-brand-blue" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm text-text-main">Google Calendar</p>
+                <p className="text-xs text-text-sec">Ver escola e MEI aqui</p>
+              </div>
+            </div>
+            <button
+              onClick={() => googleLogin()}
+              className="shrink-0 h-10 px-4 bg-brand-blue text-white rounded-2xl font-bold text-xs flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Conectar
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-brand-blue" />
+                <h3 className="text-sm font-bold text-text-main">Hoje no Google</h3>
+                {calendarLoading && <Loader2 className="w-3.5 h-3.5 text-brand-blue animate-spin" />}
+              </div>
+              <button
+                onClick={onGCalDisconnect}
+                className="text-[10px] text-text-sec hover:text-text-main font-bold uppercase tracking-wider"
+              >
+                Desconectar
+              </button>
+            </div>
+
+            {calendarEvents.length === 0 && !calendarLoading ? (
+              <div className="glass-panel rounded-2xl p-4 text-center">
+                <p className="text-xs text-text-sec font-medium">Nenhum evento hoje no Google Calendar</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {calendarEvents
+                  .filter(e => !!e.start.dateTime)
+                  .map(event => {
+                    const { start, end } = getEventTimes(event);
+                    const now = isEventNow(event);
+                    return (
+                      <div
+                        key={event.id}
+                        className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all ${
+                          now
+                            ? 'glass-panel-primary border-brand-blue/30 shadow-sm'
+                            : 'bg-white/30 border-white/40'
+                        }`}
+                      >
+                        <div className="shrink-0 text-right w-14">
+                          <span className={`text-xs font-extrabold block ${now ? 'text-brand-blue' : 'text-text-sec'}`}>{start}</span>
+                          <span className="text-[10px] text-text-sec">{end}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-bold text-sm leading-tight truncate ${now ? 'text-text-main' : 'text-text-main'}`}>
+                            {event.summary}
+                          </p>
+                          {event.location && (
+                            <p className="text-[10px] text-text-sec mt-0.5 flex items-center gap-1 truncate">
+                              <MapPin className="w-2.5 h-2.5 shrink-0" />
+                              {event.location}
+                            </p>
+                          )}
+                        </div>
+                        {now && (
+                          <span className="text-[9px] bg-brand-blue text-white font-extrabold px-1.5 py-0.5 rounded shrink-0 uppercase">
+                            Agora
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                }
+                {calendarEvents.some(e => !e.start.dateTime) && (
+                  <div className="space-y-1.5">
+                    {calendarEvents
+                      .filter(e => !e.start.dateTime)
+                      .map(event => (
+                        <div key={event.id} className="flex items-center gap-2 px-2 py-1.5 bg-white/20 rounded-xl border border-white/30">
+                          <span className="text-[10px] text-brand-blue font-bold uppercase tracking-wider w-14 shrink-0">Dia todo</span>
+                          <span className="text-xs font-semibold text-text-main truncate">{event.summary}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Fila Única Block */}
       <section className="space-y-3">

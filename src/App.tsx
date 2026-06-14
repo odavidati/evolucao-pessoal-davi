@@ -9,6 +9,7 @@ import { Sparkles, Dumbbell, Clock, DollarSign, Heart, LogOut, ArrowRight, BookO
 
 import { AppState, DailyCheckIn, EssentialItems, CustomChecklistItem, BodyMetrics, FechamentoDia, VidaHabitos } from './types';
 import { DOMESTIC_TASKS, INITIAL_CHECKLIST_ATRASO } from './data/initialData';
+import { GCalEvent, fetchTodayCalendarEvents, getCachedEvents, setCachedEvents } from './services/googleCalendar';
 
 // Subcomponents
 import SplashView from './components/SplashView';
@@ -98,6 +99,12 @@ export default function App() {
 
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }>>([]);
   const [pendingConfirmAction, setPendingConfirmAction] = useState<'reset' | 'clearWorkout' | null>(null);
+
+  const [gCalToken, setGCalToken] = useState<string | null>(() => {
+    try { return localStorage.getItem('gcal_token'); } catch { return null; }
+  });
+  const [calendarEvents, setCalendarEvents] = useState<GCalEvent[]>(() => getCachedEvents());
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const [showPwaTip, setShowPwaTip] = useState(() => {
     try { return !localStorage.getItem('pwa_tip_dismissed'); } catch { return true; }
   });
@@ -390,6 +397,36 @@ export default function App() {
 
   const handleClearWorkoutData = () => {
     setPendingConfirmAction('clearWorkout');
+  };
+
+  const handleGCalConnect = async (token: string) => {
+    try { localStorage.setItem('gcal_token', token); } catch {}
+    setGCalToken(token);
+    setCalendarLoading(true);
+    try {
+      const events = await fetchTodayCalendarEvents(token);
+      setCalendarEvents(events);
+      setCachedEvents(events);
+      showToast('Google Calendar conectado!', 'success');
+    } catch (e: any) {
+      if (e.message === 'TOKEN_EXPIRED') {
+        try { localStorage.removeItem('gcal_token'); } catch {}
+        setGCalToken(null);
+        showToast('Token expirado. Conecte novamente.', 'warning');
+      }
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleGCalDisconnect = () => {
+    try {
+      localStorage.removeItem('gcal_token');
+      localStorage.removeItem('gcal_events_cache');
+    } catch {}
+    setGCalToken(null);
+    setCalendarEvents([]);
+    showToast('Google Calendar desconectado.', 'info');
   };
 
   const handleImportState = (newState: AppState) => {
@@ -815,6 +852,11 @@ export default function App() {
                   onRotateDomestica={handleRotateDomestica}
                   onOpenModoAtraso={() => setActiveOverlay('atraso')}
                   onOpenEstouPerdido={() => setActiveOverlay('lost')}
+                  gCalToken={gCalToken}
+                  calendarEvents={calendarEvents}
+                  calendarLoading={calendarLoading}
+                  onGCalConnect={handleGCalConnect}
+                  onGCalDisconnect={handleGCalDisconnect}
                 />
               )}
               {activeTab === 'dinheiro' && (
